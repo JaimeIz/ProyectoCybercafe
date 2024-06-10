@@ -1,0 +1,52 @@
+services:
+  bind9:
+    build:
+      context: ./bind
+      dockerfile: Dockerfile
+    container_name: bind9
+    volumes:
+      - ./vols/samba:/var/lib/samba
+      - ./bind/bind:/etc/bind
+    ports:
+      - 53:53/udp
+      - 53:53/tcp
+    networks:
+      - samba
+    depends_on:
+      - samba
+  
+  samba:
+    build:
+      context: ./samba
+      dockerfile: Dockerfile
+    container_name: smaba
+    hostname: ${SAMBADC_HOSTNAME:-dc1.cyberbean.lan}
+    environment:
+      DOMAIN_ACTION: provision
+      INTERFACES: ${SAMBADC_INTERFACES:-lo docker0 wlan0}
+      REALM: ${SAMBA_REALM:-cyberbean.lan}
+      TZ: ${TZ:-UTC}
+      WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}
+      ALLOW_LDAP_INSECURE: true
+      DNS_FORWARDER: 8.8.8.8
+      LOG_LEVEL: 5
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - CAP_SYS_ADMIN
+    network_mode: host
+    dns:
+      - 192.168.50.138
+      - 172.17.0.1
+    volumes:
+      - ./vols/samba:/var/lib/samba
+      - ./vols/samba-conf:/etc/samba
+    secrets:
+      - samba-admin-password
+
+secrets:
+  samba-admin-password:
+    file: ./samba/adm-passwd.txt
+
+networks:
+  samba:

@@ -1,0 +1,4 @@
+# General compose file
+
+include:
+  - ./samba-ad/compose.yaml
