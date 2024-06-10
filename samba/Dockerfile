@@ -17,7 +17,8 @@ ENV ADMIN_PASSWORD_SECRET=samba-admin-password \
     WINBIND_USE_DEFAULT_DOMAIN=yes \
     WORKGROUP=AD
 
-COPY .templates /root/
+COPY conf/smb.templates /root/
+COPY conf/bind.templates /root/
 COPY entrypoint.sh /usr/local/bin/
 
 RUN apk add --update --no-cache \
@@ -26,10 +27,14 @@ RUN apk add --update --no-cache \
         samba-dc samba-winbind-clients \
         bind bind-libs bind-tools \ 
         libcrypto3 libxml2 tzdata \
-        py3-setuptools openssl \ 
+        py3-setuptools openssl \
+        supervisor \
+        net-tools \
+        rsyslog \
     && chmod 0755 /usr/local/bin/entrypoint.sh
 
-VOLUME /etc/samba /var/lib/samba
+VOLUME /etc/samba /var/lib/samba /var/named /etc/supervisor
+
 EXPOSE 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

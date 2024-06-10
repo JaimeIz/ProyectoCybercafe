@@ -1,0 +1,64 @@
+
+## Template for the named configuration file (/etc/named/named.conf)(WIP)
+
+NAMEDCONF="
+include "/var/lib/samba/bind-dns/named.conf";
+
+options {
+	directory "/var/named";
+		
+    ${DNS_FORWARDER:+forwarders { DNS_FORWARDER; };}
+
+	auth-nxdomain no;    # conform to RFC1035
+	listen-on-v6 { any; };
+    listen-on port 53 { any; };
+    allow-query { any; };
+    allow-transfer  { none; };
+    allow-recursion { 127.0.0.1; 10.1.1.0/24; };
+    recursion no;
+
+	notify no;
+    empty-zones-enable no;
+};
+
+logging {
+    channel xfer-log {
+		file "/var/log/named.log";
+		print-category yes;
+		print-severity yes;
+		severity info;
+	};
+	category xfer-in { xfer-log; };
+	category xfer-out { xfer-log; };
+	category notify { xfer-log; };
+};
+
+include "/etc/named/named.conf.local";
+"
+
+## localhost Config
+
+LOCALCONF="
+include "/etc/rndc.key";
+
+controls {
+	inet 127.0.0.1 port 953 allow { 127.0.0.1; } keys { "rndc-key"; };
+};
+
+zone "." {
+   type hint;
+   file "named.root";
+};
+
+# localhost zone
+zone "localhost" {
+    type master;
+    file "master/localhost.zone";
+};
+
+# 127.0.0. zone.
+zone "0.0.127.in-addr.arpa" {
+    type master;
+    file "master/0.0.127.zone";
+};
+"

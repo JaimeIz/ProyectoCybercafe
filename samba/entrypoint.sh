@@ -37,14 +37,14 @@ if [ ! -f /var/lib/samba/registry.tdb ]; then
   PROVISION_OPTS="--server-role=dc --use-rfc2307 --domain=$WORKGROUP --realm=$REALM --adminpass='$ADMIN_PASSWORD'"
 
   # This step is required for INTERFACE_OPTS to work as expected
-  echo "samba-tool domain $DOMAIN_ACTION $PROVISION_OPTS $INTERFACE_OPTS --dns-backend=SAMBA_INTERNAL" | sh
+  echo "samba-tool domain $DOMAIN_ACTION $PROVISION_OPTS $INTERFACE_OPTS --dns-backend=BIND9_DLZ" | sh
 
   mv /etc/samba/smb.conf /etc/samba/smb.conf.bak
   echo 'root = administrator' > /etc/samba/smbusers
 
 fi
 
-mkdir -p -m 700 /etc/samba/conf.d
+## Setup certs
 
 CERTS_DIR="/var/lib/samba/private/tls"
 mkdir -p -m 700 $CERTS_DIR
@@ -53,9 +53,11 @@ mkdir -p -m 700 $CERTS_DIR
 #openssl req -nodes -newkey rsa:2048 -keyout $CERTS_DIR/server.key -out $CERTS_DIR/server.scr  -subj "/C=ES/ST=HUESCA/L=HUESCA/O=Dis/CN=$HOST.$REALM"
 #openssl x509 -req -in $CERTS_DIR/server.scr -days 365 -CA $CERTS_DIR/ca.crt -CAkey $CERTS_DIR/ca.key -CAcreateserial -out $CERTS_DIR/server.crt
 
+## Setup samba configuration
 rm -f /etc/samba/smb.conf /etc/krb5.conf
+mkdir -p -m 700 /etc/samba/conf.d
 
-source /root/.templates
+source /root/smb.templates
 echo "$SMBCONF" > /etc/samba/smb.conf
 echo "$NETLOGON" > /etc/samba/conf.d/netlogon.conf
 echo "$SYSVOL" > /etc/samba/conf.d/sysvol.conf
@@ -65,4 +67,15 @@ for file in $(ls -A /etc/samba/conf.d/*.conf); do
   echo "include = $file" >> /etc/samba/smb.conf
 done
 
-exec samba --model=$MODEL -i </dev/null
+## Setup bind configuration
+
+mkdir -p -m 700 /etc/named
+chown named:named /etc/named
+
+rndc-confgen -a
+
+source /root/bind.templates
+echo "$NAMEDCONF" > /etc/named/named.conf
+echo "$LOCALCONF" > /etc/named/named.conf.local
+
+/usr/bin/supervisord -c /etc/supervisor/supervisord.conf

@@ -1,5 +1,7 @@
 # This file is to be sourced from the setup script
 
+## Templates for samba configurations
+
 NETLOGON="
 [netlogon]
 	path = /var/lib/samba/sysvol/$REALM/scripts
@@ -18,15 +20,13 @@ SMBCONF="
 	workgroup = $WORKGROUP
 
 	add machine script = /usr/sbin/adduser -D -H -G users -s /bin/false %u
-	allow dns updates = $ALLOW_DNS_UPDATES
 	bind interfaces only = $BIND_INTERFACES_ONLY
+	interfaces = $INTERFACES
 	domain logons = $DOMAIN_LOGONS
 	domain master = $DOMAIN_MASTER
-	interfaces = $INTERFACES
 	log level = $LOG_LEVEL
 	winbind refresh tickets = Yes
 	winbind use default domain = $WINBIND_USE_DEFAULT_DOMAIN
-	${DNS_FORWARDER:+dns forwarder = $DNS_FORWARDER}
 	${ALLOW_LDAP_INSECURE:+ldap server require strong auth = no}
 
 	tls enabled  = yes
@@ -40,6 +40,9 @@ SYSVOL="
 	path = /var/lib/samba/sysvol
 	read only = No
 "
+
+
+## Template for the krb config file (/etc/krb5.conf)
 
 KRB5CONF="
 [libdefaults]
@@ -60,3 +63,4 @@ KRB5CONF="
 	$REALM = $NETBIOS_NAME.$REALM
 	$WORKGROUP = $REALM
 "
+
