@@ -24,7 +24,6 @@ services:
     volumes:
       - ./vols/samba:/var/lib/samba
       - ./vols/samba-conf:/etc/samba
-      - ./vols/named-data:/var/named
       - ./conf/supervisor:/etc/supervisor
     secrets:
       - samba-admin-password

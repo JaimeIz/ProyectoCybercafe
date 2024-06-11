@@ -7,6 +7,7 @@ else
 fi
 
 REALM=$(echo "$REALM" | tr [a-z] [A-Z])
+DOMAIN=$(echo "$REALM" | tr [A-Z] [a-z]) 
 WORKGROUP=$(echo "$WORKGROUP" | tr [a-z] [A-Z])
 ALLOW_LDAP_INSECURE=$(echo "$ALLOW_LDAP_INSECURE" | tr [A-Z] [a-z])
 
@@ -55,12 +56,10 @@ mkdir -p -m 700 $CERTS_DIR
 
 ## Setup samba configuration
 rm -f /etc/samba/smb.conf /etc/krb5.conf
-mkdir -p -m 700 /etc/samba/conf.d
+mkdir -p -m 744 /etc/samba/conf.d
 
 source /root/smb.templates
 echo "$SMBCONF" > /etc/samba/smb.conf
-echo "$NETLOGON" > /etc/samba/conf.d/netlogon.conf
-echo "$SYSVOL" > /etc/samba/conf.d/sysvol.conf
 echo "$KRB5CONF" > /etc/krb5.conf
 
 for file in $(ls -A /etc/samba/conf.d/*.conf); do
@@ -68,14 +67,14 @@ for file in $(ls -A /etc/samba/conf.d/*.conf); do
 done
 
 ## Setup bind configuration
+cp /root/named.conf.local /etc/bind
+cp /root/named.conf /etc/bind
+cp -r /root/named /var
+    
+chown -R named:named /etc/bind
+chmod -R 700 /etc/bind
 
-mkdir -p -m 700 /etc/named
-chown named:named /etc/named
-
-rndc-confgen -a
-
-source /root/bind.templates
-echo "$NAMEDCONF" > /etc/named/named.conf
-echo "$LOCALCONF" > /etc/named/named.conf.local
+chown -R named:named /var/named
+chmod -R 740 /var/named
 
 /usr/bin/supervisord -c /etc/supervisor/supervisord.conf

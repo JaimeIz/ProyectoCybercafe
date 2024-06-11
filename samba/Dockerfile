@@ -18,21 +18,21 @@ ENV ADMIN_PASSWORD_SECRET=samba-admin-password \
     WORKGROUP=AD
 
 COPY conf/smb.templates /root/
-COPY conf/bind.templates /root/
 COPY entrypoint.sh /usr/local/bin/
+COPY conf/bind /root
 
 RUN apk add --update --no-cache \
         krb5 \
         tdb ldb-tools \
         samba-dc samba-winbind-clients \
-        bind bind-libs bind-tools \ 
+        bind-dev bind-libs bind-tools \ 
         libcrypto3 libxml2 tzdata \
         py3-setuptools openssl \
         supervisor \
         net-tools \
         rsyslog \
     && chmod 0755 /usr/local/bin/entrypoint.sh
-
+        
 VOLUME /etc/samba /var/lib/samba /var/named /etc/supervisor
 
 EXPOSE 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
