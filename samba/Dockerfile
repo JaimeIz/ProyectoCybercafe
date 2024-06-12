@@ -41,7 +41,9 @@ RUN  apt update \
 
 COPY conf/smb.templates /root/
 COPY entrypoint.sh /usr/local/bin/
-COPY conf/bind /root
+COPY conf/bind/config /root/bind
+COPY conf/bind/zones /root/named
+
 
 RUN chmod 0755 /usr/local/bin/entrypoint.sh
         

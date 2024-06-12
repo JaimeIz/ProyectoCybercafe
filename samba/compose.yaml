@@ -7,7 +7,7 @@ services:
     hostname: ${SAMBADC_HOSTNAME:-dc1.cyberbean.lan}
     environment:
       DOMAIN_ACTION: provision
-      INTERFACES: ${SAMBADC_INTERFACES:-lo docker0 wlan0}
+      INTERFACES: ${SAMBADC_INTERFACES:-lo wlan0 vboxnet0}
       REALM: ${SAMBA_REALM:-cyberbean.lan}
       TZ: ${TZ:-UTC}
       WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}
@@ -19,8 +19,7 @@ services:
       - CAP_SYS_ADMIN
     network_mode: host
     dns:
-      - 192.168.50.138
-      - 172.17.0.1
+      - 10.119.148.204
     volumes:
       - ./vols/samba:/var/lib/samba
       - ./vols/samba-conf:/etc/samba

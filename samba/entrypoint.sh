@@ -69,8 +69,7 @@ for file in $(ls -A /etc/samba/conf.d/*.conf); do
 done
 
 ## Setup bind configuration
-cp /root/named.conf.local /etc/bind
-cp /root/named.conf /etc/bind
+cp -r /root/bind /etc
 cp -r /root/named /var
     
 chown -R bind:bind /etc/bind
