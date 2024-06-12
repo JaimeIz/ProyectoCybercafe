@@ -39,12 +39,11 @@ RUN  apt update \
     && rm -rf /var/lib/{apt,dpkg,cache,log} \
     && rm -fr /tmp/* /var/tmp/*
 
-COPY conf/smb.templates /root/
-COPY entrypoint.sh /usr/local/bin/
+COPY conf/smb.templates /root
 COPY conf/bind/config /root/bind
 COPY conf/bind/zones /root/named
 
-
+COPY entrypoint.sh /usr/local/bin/
 RUN chmod 0755 /usr/local/bin/entrypoint.sh
         
 VOLUME /etc/samba /var/lib/samba /var/named /etc/supervisor
