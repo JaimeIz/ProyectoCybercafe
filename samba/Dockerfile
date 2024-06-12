@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM debian
 
 ENV ADMIN_PASSWORD_SECRET=samba-admin-password \
     ALLOW_DNS_UPDATES=secure \
@@ -17,21 +17,33 @@ ENV ADMIN_PASSWORD_SECRET=samba-admin-password \
     WINBIND_USE_DEFAULT_DOMAIN=yes \
     WORKGROUP=AD
 
+
+RUN  apt update \
+    && apt install -y \
+        acl \
+        ntp \
+        attr \
+        sssd \
+        samba smbclient \ 
+        winbind libnss-winbind libpam-winbind \
+        ldb-tools ldap-utils \ 
+        bind9 bind9utils dnsutils \
+        krb5-user krb5-kdc libpam-krb5 \
+        openssl ca-certificates certbot \
+        pwgen expect \
+        supervisor \
+        rsyslog pkg-config \
+        inetutils-ping \
+    && apt-get clean autoclean \
+    && apt-get autoremove --yes \
+    && rm -rf /var/lib/{apt,dpkg,cache,log} \
+    && rm -fr /tmp/* /var/tmp/*
+
 COPY conf/smb.templates /root/
 COPY entrypoint.sh /usr/local/bin/
 COPY conf/bind /root
 
-RUN apk add --update --no-cache \
-        krb5 \
-        tdb ldb-tools \
-        samba-dc samba-winbind-clients \
-        bind-dev bind-libs bind-tools \ 
-        libcrypto3 libxml2 tzdata \
-        py3-setuptools openssl \
-        supervisor \
-        net-tools \
-        rsyslog \
-    && chmod 0755 /usr/local/bin/entrypoint.sh
+RUN chmod 0755 /usr/local/bin/entrypoint.sh
         
 VOLUME /etc/samba /var/lib/samba /var/named /etc/supervisor
 

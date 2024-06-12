@@ -58,9 +58,11 @@ mkdir -p -m 700 $CERTS_DIR
 rm -f /etc/samba/smb.conf /etc/krb5.conf
 mkdir -p -m 744 /etc/samba/conf.d
 
-source /root/smb.templates
-echo "$SMBCONF" > /etc/samba/smb.conf
+. /root/smb.templates
 echo "$KRB5CONF" > /etc/krb5.conf
+echo "$SMBCONF" > /etc/samba/smb.conf
+echo "$NETLOGON" > /etc/samba/conf.d/netlogon.conf
+echo "$SYSVOL" > /etc/samba/conf.d/sysvol.conf
 
 for file in $(ls -A /etc/samba/conf.d/*.conf); do
   echo "include = $file" >> /etc/samba/smb.conf
@@ -71,10 +73,10 @@ cp /root/named.conf.local /etc/bind
 cp /root/named.conf /etc/bind
 cp -r /root/named /var
     
-chown -R named:named /etc/bind
+chown -R bind:bind /etc/bind
 chmod -R 700 /etc/bind
 
-chown -R named:named /var/named
+chown -R bind:bind /var/named
 chmod -R 740 /var/named
 
 /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
