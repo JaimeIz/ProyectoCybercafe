@@ -13,19 +13,23 @@ services:
       WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}
       ALLOW_LDAP_INSECURE: true
       LOG_LEVEL: 5
+    volumes:
+      - ../shared-vols/certs:/certs
+      - ./vols/samba:/var/lib/samba
+      - ./vols/samba-conf:/etc/samba
+      - ./conf/supervisor:/etc/supervisor
+    secrets:
+      - samba-admin-password
     restart: always
+    depends_on:
+      certs:
+        condition: service_healthy
     cap_add:
       - NET_ADMIN
       - CAP_SYS_ADMIN
     network_mode: host
     dns:
       - 10.119.148.204
-    volumes:
-      - ./vols/samba:/var/lib/samba
-      - ./vols/samba-conf:/etc/samba
-      - ./conf/supervisor:/etc/supervisor
-    secrets:
-      - samba-admin-password
 
 secrets:
   samba-admin-password:

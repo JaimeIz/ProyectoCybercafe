@@ -24,9 +24,9 @@ SMBCONF="
 	${ALLOW_LDAP_INSECURE:+ldap server require strong auth = no}
 
 	tls enabled  = yes
-	tls keyfile  = tls/server.key
-	tls certfile = tls/server.crt
-	tls cafile   = tls/ca.crt
+	tls keyfile  = /certs/server.key
+	tls certfile = /certs/server.cer
+	tls cafile   = /tls/ca.crt
 "
 
 NETLOGON="
