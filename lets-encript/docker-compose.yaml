@@ -1,0 +1,35 @@
+services:
+  certs:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: certs
+    volumes:
+      - ../shared-vols/certs:/certs
+      - ./vols/acmeout:/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock 
+    environment:
+      - DuckDNS_Token=${DuckDNS_Token}
+      - Domain=cyber-bean.duckdns.org
+      - Mail=administrator@cyber-bean.duckdns.org
+      - DEPLOY_DOCKER_CONTAINER_LABEL=sh.acme.autoload.domain=cyber-bean.duckdns.org
+      - DEPLOY_DOCKER_CONTAINER_KEY_FILE=/usr/key.pem
+      - DEPLOY_DOCKER_CONTAINER_CERT_FILE="/usr/cert.pem"
+      - DEPLOY_DOCKER_CONTAINER_CA_FILE="/usr/ca.pem"
+      - DEPLOY_DOCKER_CONTAINER_FULLCHAIN_FILE="/usr/full.pem"
+    env_file: .env
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      proxy:
+        ipv4_address: 10.5.0.2
+
+networks:
+  proxy:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/16
+         gateway: 10.5.0.1

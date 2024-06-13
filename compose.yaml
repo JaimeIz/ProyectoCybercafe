@@ -1,4 +1,4 @@
 # General compose file
 
 include:
-  - ./samba-ad/compose.yaml
+  - ./samba/compose.yaml
