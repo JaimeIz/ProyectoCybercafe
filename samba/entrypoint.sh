@@ -22,6 +22,20 @@ if [ ! -f /etc/timezone ] && [ ! -z "$TZ" ]; then
 fi
 
 
+## Setup samba certs
+CERTS_DIR="/var/lib/samba/private/tls"
+
+rm -rf $CERTS_DIR
+mkdir -p -m 755 $CERTS_DIR
+
+cp /certs/server.key $CERTS_DIR
+cp /certs/server.crt $CERTS_DIR
+cp /certs/ca.crt $CERTS_DIR
+
+chown -R root:root $CERTS_DIR
+chmod -R 644 $CERTS_DIR
+chmod -R 600 $CERTS_DIR/server.key
+
 if [ ! -f /var/lib/samba/registry.tdb ]; then
   if [ ! -f /run/secrets/$ADMIN_PASSWORD_SECRET ]; then
     echo 'Cannot read secret $ADMIN_PASSWORD_SECRET in /run/secrets'
@@ -45,10 +59,6 @@ if [ ! -f /var/lib/samba/registry.tdb ]; then
 
 fi
 
-## Setup certs
-
-CERTS_DIR="/var/lib/samba/private/tls"
-mkdir -p -m 700 $CERTS_DIR
 
 #openssl req -nodes -x509 -newkey rsa:2048 -keyout $CERTS_DIR/ca.key -out $CERTS_DIR/ca.crt -subj "/C=ES/ST=HUESCA/L=HUESCA/O=Dis/CN=$REALM"
 #openssl req -nodes -newkey rsa:2048 -keyout $CERTS_DIR/server.key -out $CERTS_DIR/server.scr  -subj "/C=ES/ST=HUESCA/L=HUESCA/O=Dis/CN=$HOST.$REALM"

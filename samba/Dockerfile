@@ -42,11 +42,12 @@ RUN  apt update \
 COPY conf/smb.templates /root
 COPY conf/bind/config /root/bind
 COPY conf/bind/zones /root/named
+COPY conf/supervisor /etc/supervisor
 
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod 0755 /usr/local/bin/entrypoint.sh
         
-VOLUME /etc/samba /var/lib/samba /var/named /etc/supervisor
+VOLUME /etc/samba /var/lib/samba /var/named
 
 EXPOSE 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 

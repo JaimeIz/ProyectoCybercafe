@@ -12,7 +12,7 @@ fi
 # TODO: make it so it executes this after the renewal of the certs
 if [[ ! -f '/certs/server.cer' ]]; then
     cp /acme.sh/${Domain}_ecc/${Domain}.cer /certs/server.crt
-    cp /acme.sh/${Domain}_ecc/${Domain}.cer /certs/server.key
+    cp /acme.sh/${Domain}_ecc/${Domain}.key /certs/server.key
     cp /acme.sh/${Domain}_ecc/ca.cer /certs/ca.crt
 fi
 

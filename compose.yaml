@@ -1,4 +1,72 @@
 # General compose file
 
-include:
-  - ./samba/compose.yaml
+secrets:
+  samba-admin-password:
+    file: ./adm-passwd
+
+services:  
+  samba:
+    build:
+      context: ./samba
+      dockerfile: Dockerfile
+    container_name: samba
+    hostname: ${SAMBADC_HOSTNAME:-dc1.cyber-bean.duckdns.org}
+    environment:
+      DOMAIN_ACTION: provision
+      INTERFACES: ${SAMBADC_INTERFACES:-lo wlan0}
+      REALM: ${SAMBA_REALM:-cyber-bean.duckdns.org}
+      TZ: ${TZ:-UTC}
+      WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}
+      # ALLOW_LDAP_INSECURE: true
+      LOG_LEVEL: 5
+    volumes:
+      - ./vols/certs:/certs:ro
+      - ./vols/samba:/var/lib/samba
+      - ./vols/samba-conf:/etc/samba
+    secrets:
+      - samba-admin-password
+    cap_add:
+      - NET_ADMIN
+      - CAP_SYS_ADMIN
+    restart: always
+    depends_on:
+      certs:
+        condition: service_healthy
+    network_mode: host
+    dns:
+      - 10.119.148.204
+
+  certs:
+    build: 
+      context: ./lets-encript
+      dockerfile: Dockerfile
+    container_name: certs
+    volumes:
+      - ./vols/certs:/certs
+      - ./vols/acmeout:/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock 
+    environment:
+      - DuckDNS_Token=${DuckDNS_Token}
+      - Domain=cyber-bean.duckdns.org
+      - Mail=administrator@cyber-bean.duckdns.org
+      - DEPLOY_DOCKER_CONTAINER_LABEL=sh.acme.autoload.domain=cyber-bean.duckdns.org
+      - DEPLOY_DOCKER_CONTAINER_KEY_FILE=/usr/key.pem
+      - DEPLOY_DOCKER_CONTAINER_CERT_FILE="/usr/cert.pem"
+      - DEPLOY_DOCKER_CONTAINER_CA_FILE="/usr/ca.pem"
+      - DEPLOY_DOCKER_CONTAINER_FULLCHAIN_FILE="/usr/full.pem"
+    env_file: .env
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      proxy:
+        ipv4_address: 10.5.0.2
+
+networks:
+  proxy:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/16
+         gateway: 10.5.0.1

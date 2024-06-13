@@ -5,3 +5,4 @@ shared-vols
 # :shushing_face: SHHHH, This is secret!!
 certs
 .env
+adm-passwd
