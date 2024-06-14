@@ -1,4 +1,6 @@
 # General compose file
+include:
+  - docker-mail-server/docker-compose.yaml
 
 secrets:
   samba-admin-password:
@@ -13,7 +15,7 @@ services:
     hostname: ${SAMBADC_HOSTNAME:-dc1.cyber-bean.duckdns.org}
     environment:
       DOMAIN_ACTION: provision
-      INTERFACES: ${SAMBADC_INTERFACES:-lo wlan0}
+      INTERFACES: ${SAMBADC_INTERFACES:-lo wlan0 }
       REALM: ${SAMBA_REALM:-cyber-bean.duckdns.org}
       TZ: ${TZ:-UTC}
       WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}

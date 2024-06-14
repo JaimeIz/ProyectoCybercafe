@@ -21,30 +21,15 @@ if [ ! -f /etc/timezone ] && [ ! -z "$TZ" ]; then
   echo $TZ >/etc/timezone
 fi
 
-
-## Setup samba certs
-CERTS_DIR="/var/lib/samba/private/tls"
-
-rm -rf $CERTS_DIR
-mkdir -p -m 755 $CERTS_DIR
-
-cp /certs/server.key $CERTS_DIR
-cp /certs/server.crt $CERTS_DIR
-cp /certs/ca.crt $CERTS_DIR
-
-chown -R root:root $CERTS_DIR
-chmod -R 644 $CERTS_DIR
-chmod -R 600 $CERTS_DIR/server.key
-
 if [ ! -f /var/lib/samba/registry.tdb ]; then
   if [ ! -f /run/secrets/$ADMIN_PASSWORD_SECRET ]; then
     echo 'Cannot read secret $ADMIN_PASSWORD_SECRET in /run/secrets'
     exit 1
   fi
+  ADMIN_PASSWORD=$(cat /run/secrets/$ADMIN_PASSWORD_SECRET)
 
   rm -f /etc/samba/smb.conf /etc/krb5.conf
 
-  ADMIN_PASSWORD=$(cat /run/secrets/$ADMIN_PASSWORD_SECRET)
   if [ "$BIND_INTERFACES_ONLY" == yes ]; then
     INTERFACE_OPTS="--option=\"bind interfaces only=yes\" --option=\"interfaces=$INTERFACES\""
   fi
@@ -59,6 +44,19 @@ if [ ! -f /var/lib/samba/registry.tdb ]; then
 
 fi
 
+## Setup samba certs
+CERTS_DIR="/var/lib/samba/private/tls"
+
+rm -rf $CERTS_DIR
+mkdir -p -m 755 $CERTS_DIR
+
+cp /certs/server.key $CERTS_DIR
+cp /certs/server.crt $CERTS_DIR
+cp /certs/ca.crt $CERTS_DIR
+
+chown -R root:root $CERTS_DIR
+chmod -R 644 $CERTS_DIR
+chmod -R 600 $CERTS_DIR/server.key
 
 #openssl req -nodes -x509 -newkey rsa:2048 -keyout $CERTS_DIR/ca.key -out $CERTS_DIR/ca.crt -subj "/C=ES/ST=HUESCA/L=HUESCA/O=Dis/CN=$REALM"
 #openssl req -nodes -newkey rsa:2048 -keyout $CERTS_DIR/server.key -out $CERTS_DIR/server.scr  -subj "/C=ES/ST=HUESCA/L=HUESCA/O=Dis/CN=$HOST.$REALM"
@@ -87,5 +85,9 @@ chmod -R 700 /etc/bind
 
 chown -R bind:bind /var/named
 chmod -R 740 /var/named
+
+## Setup zones
+# samba-tool dns zonecreate "$HOSTNAME" 148.119.10.in-addr.arpa -U administrator --password="$ADMIN_PASSWORD"
+# samba-tool dns add $HOSTNAME $DOMAIN mail A 10.119.148.204 -U administrator --password=$ADMIN_PASSWORD
 
 /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
