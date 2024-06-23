@@ -1,12 +1,64 @@
 # General compose file
-include:
-  - docker-mail-server/docker-compose.yaml
 
 secrets:
   samba-admin-password:
     file: ./adm-passwd
 
-services:  
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    hostname: cyber-bean.duckdns.org
+
+    ports:
+      - "25:25"
+      - "143:143"
+      - "587:587"
+      - "993:993"
+
+    volumes:
+      - ./vols/dms/mail-data/:/var/mail/
+      - ./vols/dms/mail-state/:/var/mail-state/
+      - ./vols/dms/mail-logs/:/var/log/mail/
+      - ./vols/dms/config/:/tmp/docker-mailserver/
+      - /etc/localtime:/etc/localtime:ro
+
+    environment:
+      - ENABLE_SPAMASSASSIN=1
+      - ENABLE_CLAMAV=1
+      - ENABLE_FAIL2BAN=1
+      - ENABLE_POSTGREY=1
+
+      # - LDAP_START_TLS=yes
+      # - DOVECOT_TLS=yes
+      # - SASLAUTHD_LDAP_START_TLS=yes
+
+      # >>> Postfix LDAP Integration
+      - ACCOUNT_PROVISIONER=LDAP
+      - LDAP_SERVER_HOST=ldap://cyber-bean.duckdns.org
+      - LDAP_BIND_DN=CN=Administrator,CN=Users,DC=cyber-bean,DC=duckdns,DC=org
+      - LDAP_BIND_PW=Admin1234
+      - LDAP_SEARCH_BASE=dc=dc1,dc=cyber-bean,dc=duckdns,dc=org
+      - LDAP_QUERY_FILTER_DOMAIN=(|(mail=*@%s)(mailAlias=*@%s)(mailGroupMember=*@%s))
+      - LDAP_QUERY_FILTER_USER=(&(objectClass=inetOrgPerson)(mail=%s))
+      - LDAP_QUERY_FILTER_ALIAS=(&(objectClass=inetOrgPerson)(mailAlias=%s))
+      - LDAP_QUERY_FILTER_GROUP=(&(objectClass=inetOrgPerson)(mailGroupMember=%s))
+      - LDAP_QUERY_FILTER_SENDERS=(&(objectClass=inetOrgPerson)(|(mail=%s)(mailAlias=%s)(mailGroupMember=%s)))
+      - SPOOF_PROTECTION=1
+      # <<< Postfix LDAP Integration
+
+      # >>> Dovecot LDAP Integration
+      - DOVECOT_USER_FILTER=(&(objectClass=inetOrgPerson)(mail=%u))
+      - DOVECOT_PASS_ATTRS=uid=user,userPassword=password
+      - DOVECOT_USER_ATTRS==home=/var/mail/%{ldap:uid},=mail=maildir:~/Maildir,uidNumber=uid,gidNumber=gid
+      # <<< Dovecot LDAP Integration
+
+      # >>> SASL LDAP Authentication
+      - ENABLE_SASLAUTHD=1
+      - SASLAUTHD_MECHANISMS=ldap
+      - SASLAUTHD_LDAP_FILTER=(&(mail=%U@cyber-bean.duckdns.org)(objectClass=inetOrgPerson))
+      # <<< SASL LDAP Authentication
+
   samba:
     build:
       context: ./samba
@@ -19,7 +71,7 @@ services:
       REALM: ${SAMBA_REALM:-cyber-bean.duckdns.org}
       TZ: ${TZ:-UTC}
       WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}
-      # ALLOW_LDAP_INSECURE: true
+      ALLOW_LDAP_INSECURE: true
       LOG_LEVEL: 5
     volumes:
       - ./vols/certs:/certs:ro
@@ -64,6 +116,65 @@ services:
     networks:
       proxy:
         ipv4_address: 10.5.0.2
+
+  db:
+    image: mariadb
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    restart: always
+    volumes:
+      - db:/var/lib/mysql:Z
+    env_file:
+      - db.env
+
+  redis:
+    image: redis:alpine
+    restart: always
+
+  app:
+    image: nextcloud:apache
+    restart: always
+    volumes:
+      - nextcloud:/var/www/html:z
+    environment:
+      - VIRTUAL_HOST=
+      - LETSENCRYPT_HOST=
+      - LETSENCRYPT_EMAIL=
+      - MYSQL_HOST=db
+      - REDIS_HOST=redis
+    env_file:
+      - db.env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - proxy-tier
+      - default
+
+  crnextcloudon:
+    image: nextcloud:apache
+    restart: always
+    volumes:
+      - nextcloud:/var/www/html:z
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
+
+  proxy:
+    build: ./proxy
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+    volumes:
+      - ./vols/certs:/etc/nginx/certs:z,ro
+      - vhost.d:/etc/nginx/vhost.d:z
+      - html:/usr/share/nginx/html:z
+      - /var/run/docker.sock:/tmp/docker.sock:z,ro
+    networks:
+      - proxy-tier
 
 networks:
   proxy:
