@@ -1,0 +1,136 @@
+# General compose file
+
+secrets:
+  samba-admin-password:
+    file: ./adm-passwd
+
+services:
+  mailserver:
+    build:
+      context: ./mail-server
+      dockerfile: Dockerfile
+    container_name: mailserver
+    # Provide the FQDN of your mail server here (Your DNS MX record should point to this value)
+    hostname: mail.example.com
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+    volumes:
+      - ./vols/dms/mail-data/:/var/mail/
+      - ./vols/dms/mail-state/:/var/mail-state/
+      - ./vols/dms/mail-logs/:/var/log/mail/
+      - ./vols/dms/config/:/tmp/docker-mailserver/
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - ENABLE_RSPAMD=1
+      - ENABLE_CLAMAV=1
+      - ENABLE_FAIL2BAN=1
+    env_file:
+      - .env
+    cap_add:
+      - NET_ADMIN # For Fail2Ban to work
+    restart: always
+
+  samba:
+    build:
+      context: ./samba
+      dockerfile: Dockerfile
+    container_name: samba
+    hostname: ${SAMBADC_HOSTNAME:-dc1.cyberbean.duckdns.org}
+    environment:
+      DOMAIN_ACTION: provision
+      INTERFACES: ${SAMBADC_INTERFACES:-lo enp0s20f0u2}
+      REALM: ${SAMBA_REALM:-cyberbean.duckdns.org}
+      TZ: ${TZ:-UTC}
+      WORKGROUP: ${SAMBA_WORKGROUP:-cyberbean}
+      ALLOW_LDAP_INSECURE: true
+      LOG_LEVEL: 5
+    volumes:
+      - ./vols/certs:/certs:ro
+      - ./vols/samba:/var/lib/samba
+      - ./vols/samba-conf:/etc/samba
+    secrets:
+      - samba-admin-password
+    cap_add:
+      - NET_ADMIN
+      - CAP_SYS_ADMIN
+    restart: always
+    # depends_on:
+    #   certs:
+    #     condition: service_healthy
+    network_mode: host
+    dns:
+      - 22.0.0.2
+
+  certs:
+    build: 
+      context: ./lets-encript
+      dockerfile: Dockerfile
+    container_name: certs
+    volumes:
+      - ./vols/certs:/certs
+      - ./vols/acmeout:/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock 
+    environment:
+      - DuckDNS_Token=${DuckDNS_Token}
+      - Domain=cyberbean.duckdns.org
+      - Mail=administrator@cyberbean.duckdns.org
+      - DEPLOY_DOCKER_CONTAINER_LABEL=sh.acme.autoload.domain=cyberbean.duckdns.org
+      - DEPLOY_DOCKER_CONTAINER_KEY_FILE=/usr/key.pem
+      - DEPLOY_DOCKER_CONTAINER_CERT_FILE="/usr/cert.pem"
+      - DEPLOY_DOCKER_CONTAINER_CA_FILE="/usr/ca.pem"
+      - DEPLOY_DOCKER_CONTAINER_FULLCHAIN_FILE="/usr/full.pem"
+    env_file: .env
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 12    
+
+  mariadb:
+    image: mariadb
+    restart: always
+    volumes:
+      - ./vols/mariadb:/var/lib/mysql:Z
+      - ./mariadb:/docker-entrypoint-initdb.d
+    environment:
+      - MARIADB_AUTO_UPGRADE=1
+      - MARIADB_DISABLE_UPGRADE_BACKUP=1
+    env_file:
+      - .env
+
+  adminer:
+    image: adminer
+    restart: always
+    depends_on:
+      - mariadb
+    ports:
+      - 8080:8080
+
+  wordpress:
+    image: wordpress
+    restart: always
+    depends_on:
+      - mariadb
+    ports:
+      - 80:80
+    environment:
+      - WORDPRESS_DB_HOST=mariadb
+      - WORDPRESS_DB_NAME=${MARIADB_DATABASE}
+      - WORDPRESS_DB_USER=${MARIADB_USER}
+      - WORDPRESS_DB_PASSWORD=${MARIADB_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - wordpress-data:/var/www/html
+
+volumes:
+  wordpress-data:
+    driver_opts:
+      type: "nfs"
+      o: "addr=22.0.0.22,nolock,soft,rw"
+      device: ":/export/wordpress"
+        
+networks:
+  proxy:
